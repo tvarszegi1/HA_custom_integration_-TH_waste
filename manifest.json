@@ -1,0 +1,9 @@
+{
+  "domain": "erd_waste",
+  "name": "Érd Waste Collection",
+  "version": "2.0.0",
+  "config_flow": true,
+  "requirements": ["aiohttp"],
+  "dependencies": [],
+  "codeowners": []
+}
