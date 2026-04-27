@@ -1,4 +1,4 @@
-# HA_custom_integration_-TH_waste
+# HA_custom_integration_-ETH_waste
 Custom integration for Home Assistant, which enables collecting  data from ÉTH waste collection shedule.
 
 Installation
