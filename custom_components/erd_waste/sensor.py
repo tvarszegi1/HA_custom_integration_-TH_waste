@@ -20,166 +20,131 @@ DAYS_HU = {
 }
 
 def get_nth_weekday_of_month(year, month, weekday_idx, n):
-    """Return a date object for the n-th weekday of a given month."""
     cal = calendar.monthcalendar(year, month)
     dates = [week[weekday_idx] for week in cal if week[weekday_idx] != 0]
-    
     if 1 <= n <= len(dates):
         return date(year, month, dates[n-1])
     return None
 
 class WasteSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, waste_type):
-        """Initialize the sensor."""
         super().__init__(coordinator)
         self._waste_type = waste_type
-        
         self._attr_name = f"{coordinator.city} Waste {waste_type.capitalize()}"
         self._attr_unique_id = f"{coordinator.city}_waste_{waste_type}_{coordinator.street}_{coordinator.house_number}"
         self._attr_device_class = SensorDeviceClass.DATE
         self._attr_icon = "mdi:trash-can"
 
-    @property
-    def native_value(self):
-        """Calculate and return the next collection date based on the rule."""
+    def _get_upcoming_dates(self):
+        """Scans ahead and returns a list of all upcoming collection dates."""
         data = self.coordinator.data.get(self._waste_type)
-        if not data:
-            return None
+        if not data: return []
 
-        prop_keys = {
-            "kommunalis": "kommunalis",
-            "szelektiv": "szelektiv",
-            "zold": "zoldhulladek",
-            "uveg": "uveg" 
-        }
+        prop_keys = {"kommunalis": "kommunalis", "szelektiv": "szelektiv", "zold": "zoldhulladek", "uveg": "uveg"}
         json_key = prop_keys.get(self._waste_type)
         
         target_street = self.coordinator.street
         target_props = {}
         rule = None
 
-        # Grab ALL properties for the street so we can read the hidden 'zoldhulladek2' later
         for feature in data.get("features", []):
             props = feature.get("properties", {})
-            feature_street = props.get("name")
-            
-            if target_street == feature_street:
+            if target_street == props.get("name"):
                 target_props = props
                 rule = props.get(json_key)
                 break
 
-        if not rule:
-            return None
+        if not rule: return []
 
         today = date.today()
-        current_year = today.year
-        current_month = today.month
+        upcoming = []
 
         try:
-            # KOMMUNÁLIS (e.g., "Péntek")
+            # KOMMUNÁLIS (Next 10 weeks)
             if self._waste_type == "kommunalis":
                 target_weekday = DAYS_HU.get(str(rule).lower())
                 if target_weekday is not None:
                     days_ahead = target_weekday - today.weekday()
-                    if days_ahead < 0: 
-                        days_ahead += 7
-                    return today + timedelta(days=days_ahead)
+                    if days_ahead < 0: days_ahead += 7
+                    for i in range(10):
+                        upcoming.append(today + timedelta(days=days_ahead + (7 * i)))
 
-            # SZELEKTÍV (e.g., "1_5_pentek", "3_15_pentek")
+            # SZELEKTÍV (Scan next 150 days)
             elif self._waste_type == "szelektiv":
                 parts = str(rule).lower().split('_')
-                
-                # Bi-weekly (Kéthetente) logic based on Even/Odd weeks of the year
                 if len(parts) >= 2:
-                    day_str = parts[-1] 
-                    target_weekday = DAYS_HU.get(day_str)
-                    
+                    target_weekday = DAYS_HU.get(parts[-1])
                     if target_weekday is not None:
                         cycle_id = int(parts[0]) if parts[0].isdigit() else 1
-                        # Cycles starting with 1 or 3 happen on ODD weeks. Cycles 2 or 4 happen on EVEN weeks.
                         target_is_even = (cycle_id in [2, 4])
-                        
-                        # Look ahead at the next 4 weeks to find the matching day AND odd/even parity
-                        for i in range(28):
+                        for i in range(150):
                             d = today + timedelta(days=i)
                             if d.weekday() == target_weekday:
-                                is_even_week = (d.isocalendar()[1] % 2 == 0)
-                                if is_even_week == target_is_even:
-                                    return d
-                                    
-                # Weekly fallback (if a city just specifies a day like "pentek")
+                                if (d.isocalendar()[1] % 2 == 0) == target_is_even:
+                                    upcoming.append(d)
                 elif len(parts) == 1:
                     target_weekday = DAYS_HU.get(parts[0])
                     if target_weekday is not None:
                         days_ahead = target_weekday - today.weekday()
                         if days_ahead < 0: days_ahead += 7
-                        return today + timedelta(days=days_ahead)
+                        for i in range(10):
+                            upcoming.append(today + timedelta(days=days_ahead + (7 * i)))
 
-            # ZÖLDHULLADÉK (Bi-weekly Saturdays based on Odd/Even weeks)
+            # ZÖLDHULLADÉK (Scan next 150 days)
             elif self._waste_type == "zold":
                 target_weekday = 5 # Saturday
+                z2_val, z1_val = target_props.get("zoldhulladek2"), target_props.get("zoldhulladek")
+                target_is_even = True if (str(z2_val) == "13" or str(z1_val) in ["1", "3"]) else False
                 
-                z2_val = target_props.get("zoldhulladek2")
-                z1_val = target_props.get("zoldhulladek")
-                
-                # In Érd, Zone 2 & 4 ("24") is collected on Odd weeks (e.g. Week 23, 25).
-                # Therefore, Zones 1 & 3 ("13") are collected on Even weeks.
-                target_is_even = False # Default to Odd weeks
-                
-                if str(z2_val) == "13" or str(z1_val) in ["1", "3"]:
-                    target_is_even = True # Even weeks
-                elif str(z2_val) == "24" or str(z1_val) in ["2", "4"]:
-                    target_is_even = False # Odd weeks
-                
-                # Scan the next 4 weeks to find the matching Saturday
-                for i in range(28):
+                for i in range(150):
                     d = today + timedelta(days=i)
                     if d.weekday() == target_weekday:
-                        is_even_week = (d.isocalendar()[1] % 2 == 0)
-                        if is_even_week == target_is_even:
-                            return d
+                        if (d.isocalendar()[1] % 2 == 0) == target_is_even:
+                            upcoming.append(d)
 
-            # ÜVEG (e.g., "szombat1")
+            # ÜVEG (Scan next 12 months)
             elif self._waste_type == "uveg":
                 rule_str = str(rule).lower()
-                
-                # Extract the day string (letters only) and week number (digits only)
                 day_match = re.search(r'([a-zöüóőúáéí]+)', rule_str)
                 week_match = re.search(r'(\d+)', rule_str)
-                
                 if day_match and week_match:
-                    day_str = day_match.group(1)
+                    target_weekday = DAYS_HU.get(day_match.group(1))
                     target_week = int(week_match.group(1))
-                    target_weekday = DAYS_HU.get(day_str)
-                    
                     if target_weekday is not None:
-                        upcoming_dates = []
-                        for month_offset in [0, 1, 2]: # Look a bit further ahead as glass is usually infrequent
-                            m = current_month + month_offset
-                            y = current_year
-                            if m > 12:
-                                m = m % 12
-                                if m == 0: m = 12
-                                if month_offset > 0 and m == 1: y += 1
-                                
+                        for month_offset in range(12):
+                            m = today.month + month_offset
+                            y = today.year
+                            while m > 12:
+                                m -= 12
+                                y += 1
                             d = get_nth_weekday_of_month(y, m, target_weekday, target_week)
                             if d and d >= today:
-                                upcoming_dates.append(d)
-                                
-                        if upcoming_dates:
-                            return min(upcoming_dates)
+                                upcoming.append(d)
 
         except Exception as e:
-            _LOGGER.error(f"Error parsing waste rule '{rule}' for {self._waste_type}: {e}")
-            return None
+            _LOGGER.error(f"Error parsing waste rule '{rule}': {e}")
+            
+        return sorted(list(set(upcoming)))
 
-        return None
+    @property
+    def native_value(self):
+        """Returns the very next collection date."""
+        dates = self._get_upcoming_dates()
+        return dates[0] if dates else None
+
+    @property
+    def extra_state_attributes(self):
+        """Returns a list of the FUTURE collection dates (excluding the current one)."""
+        dates = self._get_upcoming_dates()
+        if not dates or len(dates) <= 1:
+            return {}
+            
+        # Grab the next 5 dates after the upcoming one
+        future_list = [d.strftime("%Y-%m-%d") for d in dates[1:6]]
+        return {
+            "future_dates": future_list
+        }
 
 async def async_setup_entry(hass, entry, async_add_entities):
     coordinator = hass.data[DOMAIN][entry.entry_id]
-
-    entities = []
-    for key in coordinator.data.keys():
-        entities.append(WasteSensor(coordinator, key))
-
-    async_add_entities(entities)
+    async_add_entities([WasteSensor(coordinator, key) for key in coordinator.data.keys()])
