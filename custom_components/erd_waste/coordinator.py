@@ -14,7 +14,7 @@ class WasteCoordinator(DataUpdateCoordinator):
             name="erd_waste",
             update_interval=timedelta(hours=12),
         )
-        self.city = config_data.get("city", "Érd")
+        self.city = config_data.get("city")
         self.street = config_data.get("street", "")
         self.house_number = config_data.get("house_number", "")
         
