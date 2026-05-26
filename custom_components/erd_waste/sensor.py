@@ -115,43 +115,29 @@ class WasteSensor(CoordinatorEntity, SensorEntity):
                         if days_ahead < 0: days_ahead += 7
                         return today + timedelta(days=days_ahead)
 
-            # ZÖLDHULLADÉK (Reads hidden zoldhulladek2 property to find the specific Saturdays)
+            # ZÖLDHULLADÉK (Bi-weekly Saturdays based on Odd/Even weeks)
             elif self._waste_type == "zold":
-                target_weekday = 5 # Default to Saturday
+                target_weekday = 5 # Saturday
                 
                 z2_val = target_props.get("zoldhulladek2")
                 z1_val = target_props.get("zoldhulladek")
                 
-                target_weeks = []
-                # If zoldhulladek2 exists (e.g., 13 or 24), use those exact week numbers!
-                if z2_val:
-                    target_weeks = [int(x) for x in str(z2_val) if x.isdigit()]
-                # Otherwise, try to infer it from the standard zoldhulladek id
-                elif z1_val:
-                    if int(z1_val) in [1, 3]:
-                        target_weeks = [1, 3]
-                    elif int(z1_val) in [2, 4]:
-                        target_weeks = [2, 4]
-                        
-                if not target_weeks:
-                    target_weeks = [1, 3] # Safe fallback
+                # In Érd, Zone 2 & 4 ("24") is collected on Odd weeks (e.g. Week 23, 25).
+                # Therefore, Zones 1 & 3 ("13") are collected on Even weeks.
+                target_is_even = False # Default to Odd weeks
                 
-                upcoming_dates = []
-                for month_offset in [0, 1]:
-                    m = current_month + month_offset
-                    y = current_year
-                    if m > 12:
-                        m = m % 12
-                        if m == 0: m = 12
-                        if month_offset > 0 and m == 1: y += 1
-                        
-                    for n in target_weeks:
-                        d = get_nth_weekday_of_month(y, m, target_weekday, n)
-                        if d and d >= today:
-                            upcoming_dates.append(d)
-                        
-                if upcoming_dates:
-                    return min(upcoming_dates)
+                if str(z2_val) == "13" or str(z1_val) in ["1", "3"]:
+                    target_is_even = True # Even weeks
+                elif str(z2_val) == "24" or str(z1_val) in ["2", "4"]:
+                    target_is_even = False # Odd weeks
+                
+                # Scan the next 4 weeks to find the matching Saturday
+                for i in range(28):
+                    d = today + timedelta(days=i)
+                    if d.weekday() == target_weekday:
+                        is_even_week = (d.isocalendar()[1] % 2 == 0)
+                        if is_even_week == target_is_even:
+                            return d
 
             # ÜVEG (e.g., "szombat1")
             elif self._waste_type == "uveg":
