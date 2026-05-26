@@ -19,5 +19,20 @@ This integration supports the following locations:
 The integration will create 3 or 4 entities (3 for locations with separate communal / green / selective shedules, and 4 for locations with separate communal / green / selective / glass shedules).
 The entities shows the next date for each specific type of waste collection. It will recheck the data in  every 12 hours.
 
+This integration supports HA calendar.
+
+You can also use markdown cards, such as the following:
+
+### ♻️ Érd Szelektív (Next 5 Pickups)
+{% for date in state_attr('sensor.erd_waste_szelektiv', 'future_dates') %}
+- {{ date }}
+{% endfor %}
+
+### 🌿 Érd Zöldhulladék (Next 5 Pickups)
+{% for date in state_attr('sensor.erd_waste_zold', 'future_dates') %}
+- {{ date }}
+{% endfor %}
+
+
 IMPORTANT: this integration is not an official addon made by ÉTH in any way. The creators are not responsible for the validity of the fetched data. This integration does not utilize any API keys or other secrets which can be used for malicious purposes.
 The ÉTH logo and brand name only displayed for making the integration easier to identify. The creators do not profit from the this integration in any way.
