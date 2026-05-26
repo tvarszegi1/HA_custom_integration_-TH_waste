@@ -4,6 +4,7 @@ from datetime import date, datetime, timedelta
 import logging
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,15 +26,32 @@ def get_nth_weekday_of_month(year, month, weekday_idx, n):
         return date(year, month, dates[n-1])
     return None
 
-class WasteCalendarEntity(CalendarEntity):
+class WasteCalendarEntity(CoordinatorEntity, CalendarEntity):
     def __init__(self, coordinator):
         """Initialize the calendar entity."""
-        self.coordinator = coordinator
+        super().__init__(coordinator)
         self._attr_name = f"{coordinator.city} Waste Calendar"
         self._attr_unique_id = f"{coordinator.city}_waste_calendar_{coordinator.street}_{coordinator.house_number}"
 
+    @property
+    def event(self) -> CalendarEvent | None:
+        """Return the next upcoming event (Required by Home Assistant Core)."""
+        # Scan the next 60 days to find the single next upcoming event
+        start_time = datetime.now()
+        end_time = start_time + timedelta(days=60)
+        
+        events = self._get_events_in_range(start_time, end_time)
+        if events:
+            # Sort by date and return the closest one
+            return sorted(events, key=lambda e: e.start)[0]
+        return None
+
     async def async_get_events(self, hass, start_date, end_date):
-        """Return calendar events within a specific datetime window."""
+        """Return calendar events within a specific datetime window for the UI."""
+        return self._get_events_in_range(start_date, end_date)
+
+    def _get_events_in_range(self, start_date, end_date):
+        """Core logic to calculate events between two dates."""
         events = []
         start_d = start_date.date()
         end_d = end_date.date()
