@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Select City",
+        "description": "Choose your municipality to configure the waste collection schedule.",
+        "data": {
+          "city": "City"
+        }
+      },
+      "street": {
+        "title": "Select Street & Address",
+        "description": "Select your street and optionally enter your house number.",
+        "data": {
+          "street": "Street",
+          "house_number": "House Number"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to download waste collection data from GitHub. Please verify your internet connection."
+    },
+    "abort": {
+      "already_configured": "This address is already configured."
+    }
+  }
+}

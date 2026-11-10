@@ -1,38 +1,49 @@
 ![Érd Waste Collection](logo.png)
-# HA_custom_integration_-ETH_waste
-Custom integration for Home Assistant, which enables collecting  data from ÉTH waste collection shedule.
+# HA_custom_integration_-TH_waste
 
-Installation
-1. Open HACS in your HA installation, and add this repository: https://github.com/tvarszegi1/HA_custom_integration_-TH_waste
-2. Search for the integration in HACS, then download it.
-3. Restart HA as prompted.
-4. Navigate to Settings -> Devices & Services in Home Assistant, click "Add Integration". Look for "Érd Waste Collection" -> add.
-5. Setup your integration on the UI.
+Custom integration for Home Assistant which provides collection dates and calendars from the ÉTH waste collection schedule.
 
-This integration supports the following locations:
-1. Érd
-2. Diósd
-3. Sóskút
-4. Tárnok
-5. Ráckeresztúr
+## Features
+- **Accurate Schedule Engine**: Full support for all recycling routes, weekly/bi-weekly/monthly green waste cycles (including winter schedules), communal waste, and glass waste.
+- **Sensor Entities**: Separate sensor for each waste type showing the upcoming date and future pickup dates in attributes.
+- **Calendar Platform**: Native Home Assistant Calendar support with emoji badges and descriptions.
+- **Device Registry Integration**: All sensors and calendar are grouped under a single device card per address.
+- **Bilingual**: English and Hungarian localization for setup forms and entity metadata.
 
-The integration will create 3 or 4 entities (3 for locations with separate communal / green / selective shedules, and 4 for locations with separate communal / green / selective / glass shedules).
-The entities shows the next date for each specific type of waste collection. It will recheck the data in  every 12 hours.
+## Installation
+1. Open HACS in your Home Assistant installation, navigate to **Integrations**, click the 3 dots in the top right, select **Custom repositories**, and add:
+   `https://github.com/tvarszegi1/HA_custom_integration_-TH_waste` (Type: Integration)
+2. Search for **Érd Waste Collection** in HACS, then download it.
+3. Restart Home Assistant as prompted.
+4. Navigate to **Settings -> Devices & Services**, click **Add Integration**, search for **Érd Waste Collection**.
+5. Select your city and street.
 
-This integration supports HA calendar.
+## Supported Locations
+1. **Érd** (Kommunális, Szelektív, Zöldhulladék)
+2. **Diósd** (Kommunális, Szelektív, Zöldhulladék, Üveg)
+3. **Sóskút** (Kommunális, Szelektív, Zöldhulladék)
+4. **Tárnok** (Kommunális, Szelektív, Zöldhulladék, Üveg)
+5. **Ráckeresztúr** (Kommunális, Szelektív, Zöldhulladék)
 
-You can also use markdown cards, such as the following:
+The integration checks for schedule updates every 12 hours.
 
-### ♻️ Érd Szelektív (Next 5 Pickups)
-{% for date in state_attr('sensor.erd_waste_szelektiv', 'future_dates') %}
-- {{ date }}
-{% endfor %}
+## Dashboard Examples
 
-### 🌿 Érd Zöldhulladék (Next 5 Pickups)
-{% for date in state_attr('sensor.erd_waste_zold', 'future_dates') %}
-- {{ date }}
-{% endfor %}
+You can use Markdown cards in Lovelace dashboards, such as:
 
+```yaml
+type: markdown
+content: |
+  ### ♻️ Szelektív (Next 5 Pickups)
+  {% for date in state_attr('sensor.erd_waste_szelektiv', 'future_dates') %}
+  - {{ date }}
+  {% endfor %}
 
-IMPORTANT: this integration is not an official addon made by ÉTH in any way. The creators are not responsible for the validity of the fetched data. This integration does not utilize any API keys or other secrets which can be used for malicious purposes.
-The ÉTH logo and brand name only displayed for making the integration easier to identify. The creators do not profit from the this integration in any way.
+  ### 🌿 Zöldhulladék (Next 5 Pickups)
+  {% for date in state_attr('sensor.erd_waste_zold', 'future_dates') %}
+  - {{ date }}
+  {% endfor %}
+```
+
+---
+*Disclaimer: This integration is not an official add-on made by ÉTH. The creators are not responsible for the validity of the upstream data.*

@@ -1,0 +1,27 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Település kiválasztása",
+        "description": "Válassza ki a települést a hulladékszállítási rend beállításához.",
+        "data": {
+          "city": "Település"
+        }
+      },
+      "street": {
+        "title": "Utca és cím kiválasztása",
+        "description": "Válassza ki az utcát, és adja meg a házszámot (opcionális).",
+        "data": {
+          "street": "Utca",
+          "house_number": "Házszám"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Nem sikerült letölteni a szállítási adatokat a GitHubról. Ellenőrizze az internetkapcsolatot."
+    },
+    "abort": {
+      "already_configured": "Ez a cím már be van állítva."
+    }
+  }
+}

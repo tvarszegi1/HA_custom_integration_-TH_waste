@@ -1,9 +1,11 @@
 {
   "domain": "erd_waste",
   "name": "Érd Waste Collection",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "config_flow": true,
-  "requirements": ["aiohttp"],
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/tvarszegi1/HA_custom_integration_-TH_waste/issues",
+  "requirements": [],
   "dependencies": [],
-  "codeowners": []
+  "codeowners": ["@tvarszegi1"]
 }
